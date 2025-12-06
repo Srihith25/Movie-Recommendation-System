@@ -1,0 +1,40 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title>System Offline</title>
+    <style>
+        body {
+            font-family: Segoe UI, sans-serif;
+            background: #667eea;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .message {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        h1 { color: #333; }
+        p { color: #666; margin: 20px 0; }
+        .status { 
+            background: #feb2b2; 
+            color: #742a2a; 
+            padding: 10px 20px; 
+            border-radius: 20px; 
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+    <div class="message">
+        <h1>System Offline</h1>
+        <p>The Movie Recommendation System is currently stopped to save AWS costs.</p>
+        <div class="status">Cost-Saving Mode Active</div>
+        <p>To restart the system, run: <code>start-system.ps1</code></p>
+    </div>
+</body>
+</html>

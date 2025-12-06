@@ -1,0 +1,5 @@
+﻿window.API_CONFIG = {
+    endpoint: 'https://YOUR-API-ID-HERE.execute-api.us-east-2.amazonaws.com/prod',
+    region: 'us-east-2',
+    status: 'active'
+};

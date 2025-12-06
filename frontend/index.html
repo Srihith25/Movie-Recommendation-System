@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Movie Recommendations</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        .info-box {
+            background: rgba(255,255,255,0.9);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .debug-info {
+            background: #2d3748;
+            color: #48bb78;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+        .search-box {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .search-box input {
+            width: 70%;
+            padding: 12px 20px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            margin-right: 10px;
+        }
+        .search-box button {
+            padding: 12px 30px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .search-box button:hover {
+            background: #764ba2;
+        }
+        .recommendations {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+        }
+        .movie-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .movie-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .genre-tag {
+            background: #667eea;
+            color: white;
+            padding: 3px 10px;
+            border-radius: 15px;
+            font-size: 0.85em;
+            display: inline-block;
+            margin: 2px;
+        }
+        .movie-score {
+            color: #666;
+            margin: 10px 0;
+        }
+        .explanation {
+            font-style: italic;
+            color: #555;
+            line-height: 1.4;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            border-left: 3px solid #667eea;
+        }
+        .loading {
+            text-align: center;
+            color: white;
+            font-size: 1.2em;
+            padding: 20px;
+        }
+        .error {
+            background: #ff6b6b;
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎬 AI-Powered Movie Recommendations</h1>
+        
+        <div class="info-box">
+            <p><strong>MovieLens 100K Dataset</strong></p>
+            <p>Enter a User ID between 1-943 to get personalized recommendations</p>
+            <div id="api-status" class="debug-info"></div>
+        </div>
+        
+        <div class="search-box">
+            <input type="text" id="userId" placeholder="Enter User ID (1-943)" value="1" />
+            <button onclick="getRecommendations()">Get Recommendations</button>
+            <br><br>
+            <button onclick="testConnection()" style="background: #48bb78;">Test API Connection</button>
+        </div>
+        
+        <div id="status"></div>
+        <div id="recommendations" class="recommendations"></div>
+    </div>
+    
+    <script>
+        // REPLACE WITH YOUR ACTUAL API GATEWAY ID
+        const API_ID = 'YOUR-API-ID-HERE';  // <-- CHANGE THIS!
+        const REGION = 'us-east-2';
+        const API_URL = `https://${API_ID}.execute-api.${REGION}.amazonaws.com/prod`;
+        
+        // Show API endpoint for debugging
+        //document.getElementById('api-status').innerHTML = `API Endpoint: ${API_URL}`;
+        
+        async function testConnection() {
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = '<div class="loading">🔍 Testing API connection...</div>';
+            
+            try {
+                const testUrl = `${API_URL}/users/1/recommendations`;
+                console.log('Testing URL:', testUrl);
+                
+                const response = await fetch(testUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                    },
+                    mode: 'cors'
+                });
+                
+                console.log('Response status:', response.status);
+                console.log('Response headers:', response.headers);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    statusDiv.innerHTML = '<div class="info-box" style="background: #48bb78; color: white;">✅ API Connection Successful! Found ' + data.length + ' recommendations.</div>';
+                } else {
+                    statusDiv.innerHTML = `<div class="error">API returned error: ${response.status} ${response.statusText}</div>`;
+                }
+            } catch (error) {
+                console.error('Connection test error:', error);
+                statusDiv.innerHTML = `<div class="error">❌ Connection failed: ${error.message}<br>Check console for details.</div>`;
+            }
+        }
+        
+        async function getRecommendations() {
+            const userId = document.getElementById('userId').value.trim();
+            
+            if (!userId) {
+                alert('Please enter a User ID');
+                return;
+            }
+            
+            const userIdNum = parseInt(userId);
+            if (isNaN(userIdNum) || userIdNum < 1 || userIdNum > 943) {
+                alert('Please enter a valid User ID between 1 and 943');
+                return;
+            }
+            
+            const statusDiv = document.getElementById('status');
+            const recommendationsDiv = document.getElementById('recommendations');
+            
+            statusDiv.innerHTML = '<div class="loading">🔄 Generating personalized recommendations...</div>';
+            recommendationsDiv.innerHTML = '';
+            
+            try {
+                const url = `${API_URL}/users/${userId}/recommendations`;
+                console.log('Fetching from:', url);
+                
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                    },
+                    mode: 'cors'
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('Received data:', data);
+                
+                statusDiv.innerHTML = '';
+                
+                if (data && data.length > 0) {
+                    data.forEach((rec, index) => {
+                        const card = document.createElement('div');
+                        card.className = 'movie-card';
+                        
+                        const genreTags = rec.genres.map(g => 
+                            `<span class="genre-tag">${g}</span>`
+                        ).join('');
+                        
+                        card.innerHTML = `
+                            <div class="movie-title">${rec.title}</div>
+                            <div>${genreTags}</div>
+                            <div class="movie-score">
+                                Match Score: <strong>${(rec.score * 100).toFixed(1)}%</strong>
+                            </div>
+                            <div class="explanation">${rec.explanation}</div>
+                        `;
+                        
+                        recommendationsDiv.appendChild(card);
+                    });
+                } else {
+                    statusDiv.innerHTML = '<div class="error">No recommendations found.</div>';
+                }
+                
+            } catch (error) {
+                console.error('Error:', error);
+                statusDiv.innerHTML = `<div class="error">
+                    Failed to get recommendations: ${error.message}<br>
+                    <small>Check the browser console for details.</small>
+                </div>`;
+            }
+        }
+        
+        // Test on load
+        window.onload = function() {
+            console.log('Page loaded. API URL:', API_URL);
+            document.getElementById('userId').focus();
+        };
+    </script>
+</body>
+</html>
